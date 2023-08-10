@@ -2,9 +2,10 @@ const axios = require('axios');
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function testRateLimit(url, requestsPerMinute, requestTimeout) {
+async function testRateLimit(url, requestsPerMinute, requestTimeout, totalConfirmations) {
   let lastSafeRateLimit = 0;
   let currentRequestsPerMinute = requestsPerMinute;
+  let currentConfirmations = 0;
 
   while (true) {
     let lastRequestMadeAtMs = 0;
@@ -13,11 +14,11 @@ async function testRateLimit(url, requestsPerMinute, requestTimeout) {
 
     console.log(
       `Testing with ${currentRequestsPerMinute} requests per minute `
-      + `(${timeBetweenRequests}ms between requests)...`
+      + `(${timeBetweenRequests / 1000}s between requests)...`
     );
 
     for (let i = 0; i < currentRequestsPerMinute; i++) {
-      console.debug(`${i + 1}/${currentRequestsPerMinute} ...`)
+      console.debug(`Request ${i + 1}/${currentRequestsPerMinute} ...`)
       try {
         lastRequestMadeAtMs = Date.now();
         await axios.get(url, { timeout: requestTimeout * 1000 });
@@ -44,21 +45,25 @@ async function testRateLimit(url, requestsPerMinute, requestTimeout) {
         console.log(`\nLast safe rate limit: \n\n >>>>>>> ${lastSafeRateLimit} <<<<<<\n\n`);
         process.exit(0);
       }
+    } else if (currentConfirmations < totalConfirmations) {
+      console.log(`Confirming ... [${currentConfirmations+1}/${totalConfirmations}]`);
+      currentConfirmations++;
     } else {
-      console.log(`No rate limit hit. Increasing rate to ${currentRequestsPerMinute + 1} requests per minute.`);
       lastSafeRateLimit = currentRequestsPerMinute;
-      currentRequestsPerMinute += 10;
+      currentRequestsPerMinute += 1;
+      currentConfirmations = 0;
+      console.log(`No rate limit hit. Increasing rate to ${currentRequestsPerMinute} requests per minute.`);
     }
   }
 }
 
 function showHelp() {
-  console.log(`Usage: node ${process.argv[1]} <URL> <requestsPerMinute> <requestTimeout>`);
+  console.log(`Usage: node ${process.argv[1]} <URL> <requestsPerMinute> <requestTimeout> <confirmations>`);
 }
 
 const args = process.argv.slice(2);
 
-if (args.length !== 3) {
+if (args.length !== 4) {
   showHelp();
   process.exit(1);
 }
@@ -66,11 +71,12 @@ if (args.length !== 3) {
 const url = args[0];
 const requestsPerMinute = parseInt(args[1]);
 const requestTimeout = parseInt(args[2]);
+const totalConfirmations = parseInt(args[3]);
 
-if (isNaN(requestsPerMinute) || isNaN(requestTimeout)) {
+if (isNaN(requestsPerMinute) || isNaN(requestTimeout) || isNaN(totalConfirmations)) {
   showHelp();
   process.exit(1);
 }
 
 console.log(`Starting rate limit testing for URL: ${url}`);
-testRateLimit(url, requestsPerMinute, requestTimeout);
+testRateLimit(url, requestsPerMinute, requestTimeout, totalConfirmations);
