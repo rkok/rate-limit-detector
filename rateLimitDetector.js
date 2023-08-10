@@ -1,10 +1,4 @@
 const axios = require('axios');
-const readline = require('readline');
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
