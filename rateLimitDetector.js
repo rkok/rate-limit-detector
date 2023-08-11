@@ -14,11 +14,15 @@ async function testRateLimit(url, requestsPerMinute, requestTimeout, totalConfir
 
     console.log(
       `Testing with ${currentRequestsPerMinute} requests per minute `
-      + `(${timeBetweenRequests / 1000}s between requests)...`
+      + `(${(timeBetweenRequests / 1000).toFixed(2)}s between requests)...`
     );
 
     for (let i = 0; i < currentRequestsPerMinute; i++) {
-      console.debug(`Request ${i + 1}/${currentRequestsPerMinute} ...`)
+      if (process.env.DEBUG) {
+        console.debug(`Request ${i + 1}/${currentRequestsPerMinute} ...`)
+      } else {
+        process.stdout.write('.');
+      }
       try {
         lastRequestMadeAtMs = Date.now();
         await axios.get(url, { timeout: requestTimeout * 1000 });
@@ -34,6 +38,10 @@ async function testRateLimit(url, requestsPerMinute, requestTimeout, totalConfir
       if (Date.now() - lastRequestMadeAtMs < timeBetweenRequests) {
         await sleep(timeBetweenRequests - (Date.now() - lastRequestMadeAtMs));
       }
+    }
+
+    if (!process.env.DEBUG) {
+      console.log(); // Jump to next line
     }
 
     if (rateLimited) {
